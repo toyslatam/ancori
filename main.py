@@ -9,7 +9,11 @@ from flask import Flask, request, abort
 from intuitlib.client import AuthClient
 from intuitlib.enums import Scopes
 import requests
-from pyngrok import ngrok
+from pyngrok import ngrok, conf
+
+authtoken = os.getenv("NGROK_AUTHTOKEN")
+if authtoken:
+    conf.get_default().auth_token = authtoken
 
 # 🌐 Servidor Flask
 app = Flask(__name__)
