@@ -1,0 +1,6 @@
+flask
+intuitlib
+pyngrok
+requests
+gunicorn
+python-dotenv
