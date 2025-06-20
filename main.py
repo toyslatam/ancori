@@ -155,6 +155,21 @@ def refresh_tokens():
 def run_flask():
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
 
+@app.route('/auth-urls')
+def auth_urls():
+    html = "<h2>🔗 Enlaces de autorización:</h2>"
+    for app_id, cfg in APPS.items():
+        redirect_uri = f'{RENDER_DOMAIN}/{app_id}/callback'
+        auth_client = AuthClient(
+            client_id=cfg["CLIENT_ID"],
+            client_secret=cfg["CLIENT_SECRET"],
+            redirect_uri=redirect_uri,
+            environment=ENVIRONMENT
+        )
+        auth_url = auth_client.get_authorization_url([Scopes.ACCOUNTING])
+        html += f"<p><strong>{app_id}:</strong> <a href='{auth_url}' target='_blank'>{auth_url}</a></p>"
+    return html
+
 if __name__ == '__main__':
     print("🚀 Iniciando servidor Flask en Render...")
 
