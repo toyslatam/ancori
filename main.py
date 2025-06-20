@@ -9,11 +9,6 @@ from flask import Flask, request, abort
 from intuitlib.client import AuthClient
 from intuitlib.enums import Scopes
 import requests
-from pyngrok import ngrok, conf
-
-authtoken = os.getenv("NGROK_AUTHTOKEN")
-if authtoken:
-    conf.get_default().auth_token = authtoken
 
 # 🌐 Servidor Flask
 app = Flask(__name__)
@@ -24,22 +19,22 @@ APPS = {
         "CLIENT_ID": 'ABpiC27UvCiXPjumk5T54cZWy4rxjkvc1rgxGpDx6uyfzndQeY',
         "CLIENT_SECRET": 'amnhCOVk017cvhE9pkK1WSxD07Lj5AHVLoP4695m',
         "WEBHOOK_VERIFICATION_TOKEN": 'a8d34ea3-6986-4c2a-81be-ccd9e3c052b5',
-        "POWER_AUTOMATE_URL": "https://prod-113.westus.logic.azure.com:443/workflows/c55f68d9f1374b9285645d9e6e31ca8c/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Y9uDfvLhBlo-4KFqndYPp4tt7OX7ZAyvEr3yH2FJhhA"
+        "POWER_AUTOMATE_URL": "https://prod-113.westus.logic.azure.com/..."
     },
     "app_b": {
         "CLIENT_ID": 'ABuIIPvX74z4HLYw4z3F4qZ1t7ndjVPF3l464QhS0YinYOa972',
         "CLIENT_SECRET": '0MUUP41ETTs3peH5zZqtHj5xzAztjsMj2wdRO6ia',
         "WEBHOOK_VERIFICATION_TOKEN": '9d8013d7-683d-4ecf-a705-7bcfa3afae67',
-        "POWER_AUTOMATE_URL": "https://prod-98.westus.logic.azure.com:443/workflows/d8bd5ef6bd8b47dc9536b656bacc4c51/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=4Slkbc1v62aslJ1p8VG24e_1Wd1NH3lzA9WlqdbHa1w"
+        "POWER_AUTOMATE_URL": "https://prod-98.westus.logic.azure.com/..."
     }
 }
 
-SUBDOMINIO_NGROK = 'ctwebhook'
 ENVIRONMENT = 'production'
+RENDER_DOMAIN = 'https://quickbooks-webhook.onrender.com'
 
 @app.route('/')
 def index():
-    return '✅ Servidor unificado activo', 200
+    return '✅ Servidor Flask activo en Render', 200
 
 @app.route('/<app_id>/callback')
 def callback(app_id):
@@ -52,7 +47,8 @@ def callback(app_id):
         return '❌ Código no recibido', 400
 
     cfg = APPS[app_id]
-    redirect_uri = f'https://{SUBDOMINIO_NGROK}.ngrok.io/{app_id}/callback'
+    redirect_uri = f'{RENDER_DOMAIN}/{app_id}/callback'
+
     auth_client = AuthClient(
         client_id=cfg["CLIENT_ID"],
         client_secret=cfg["CLIENT_SECRET"],
@@ -133,7 +129,7 @@ def refresh_tokens():
                     print(f"⛔ No refresh_token en {app_id}")
                     continue
 
-                redirect_uri = f'https://{SUBDOMINIO_NGROK}.ngrok.io/{app_id}/callback'
+                redirect_uri = f'{RENDER_DOMAIN}/{app_id}/callback'
                 auth_client = AuthClient(
                     client_id=cfg["CLIENT_ID"],
                     client_secret=cfg["CLIENT_SECRET"],
@@ -157,19 +153,18 @@ def refresh_tokens():
                 print(f"❌ Error renovando tokens para {app_id}:", str(e))
 
 def run_flask():
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
 
 if __name__ == '__main__':
-    print("🚀 Iniciando ngrok y servidor Flask unificado...")
-    public_url = ngrok.connect(addr=5000, subdomain=SUBDOMINIO_NGROK, bind_tls=True)
-    print(f"🌍 URL pública: {public_url}")
+    print("🚀 Iniciando servidor Flask en Render...")
 
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=refresh_tokens, daemon=True).start()
 
     time.sleep(3)
+
     for app_id, cfg in APPS.items():
-        redirect_uri = f'https://{SUBDOMINIO_NGROK}.ngrok.io/{app_id}/callback'
+        redirect_uri = f'{RENDER_DOMAIN}/{app_id}/callback'
         auth_client = AuthClient(
             client_id=cfg["CLIENT_ID"],
             client_secret=cfg["CLIENT_SECRET"],
