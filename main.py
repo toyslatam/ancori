@@ -25,7 +25,7 @@ APPS = {
         "CLIENT_ID": 'ABuIIPvX74z4HLYw4z3F4qZ1t7ndjVPF3l464QhS0YinYOa972',
         "CLIENT_SECRET": '0MUUP41ETTs3peH5zZqtHj5xzAztjsMj2wdRO6ia',
         "WEBHOOK_VERIFICATION_TOKEN": '9d8013d7-683d-4ecf-a705-7bcfa3afae67',
-        "POWER_AUTOMATE_URL": "https://prod-113.westus.logic.azure.com:443/workflows/c55f68d9f1374b9285645d9e6e31ca8c/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Y9uDfvLhBlo-4KFqndYPp4tt7OX7ZAyvEr3yH2FJhhA"
+        "POWER_AUTOMATE_URL": "https://prod-163.westus.logic.azure.com:443/workflows/181cc4143ed9445f9016f179a62e1295/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=WEdX1rsRUGKFHrczfT-12LlR7z_UcKAZO7Ly3BC9T2w"
     }
 }
 
