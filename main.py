@@ -10,6 +10,13 @@ from intuitlib.client import AuthClient
 from intuitlib.enums import Scopes
 import requests
 
+
+from supabase import create_client
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_API_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 # 🌐 Servidor Flask
 app = Flask(__name__)
 
@@ -67,9 +74,15 @@ def callback(app_id):
             "realm_id": realm_id
         }
 
-        print(f"🔐 Copia y guarda esta variable en Render → Environment → TOKENS_{app_id.upper()}:\n{json.dumps(data, indent=2)}")
-        return f'✅ Tokens generados para {app_id}. Ver consola para copiar variable.', 200
+      supabase.table("tokens").upsert({
+    "app_id": app_id,
+    "access_token": access_token,
+    "refresh_token": refresh_token,
+    "realm_id": realm_id
+}).execute()
 
+print(f"✅ Tokens guardados en Supabase para {app_id}")
+return f'✅ Tokens guardados en Supabase para {app_id}', 200
     except Exception as e:
         print(f"❌ Error en {app_id}:", str(e))
         return '❌ Error al obtener token', 500
@@ -107,13 +120,13 @@ def webhook(app_id):
 @app.route('/<app_id>/get-token')
 def get_token(app_id):
     try:
-        tokens_json = os.environ.get(f"TOKENS_{app_id.upper()}")
-        if not tokens_json:
-            return f"❌ No se encontró variable TOKENS_{app_id.upper()}", 404
-        tokens = json.loads(tokens_json)
+        response = supabase.table("tokens").select("*").eq("app_id", app_id).single().execute()
+        tokens = response.data
+        if not tokens:
+            return f"❌ No hay tokens en Supabase para {app_id}", 404
         return tokens.get("access_token", ""), 200
     except Exception as e:
-        return f"❌ Error al leer token de {app_id}: {str(e)}", 500
+        return f"❌ Error al leer token desde Supabase para {app_id}: {str(e)}", 500
 
 def refresh_tokens():
     while True:
