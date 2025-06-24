@@ -115,10 +115,11 @@ def webhook(app_id):
 @app.route('/<app_id>/get-token')
 def get_token(app_id):
     try:
-        response = supabase.table("tokens").select("*").eq("app_id", app_id).single().execute()
-        tokens = response.data
-        if not tokens:
+        response = supabase.table("tokens").select("*").eq("app_id", app_id).execute()
+        data = response.data
+        if not data:
             return f"❌ No hay tokens en Supabase para {app_id}", 404
+        tokens = data[0]  # Tomamos la primera fila (solo debería haber una)
         return tokens.get("access_token", ""), 200
     except Exception as e:
         return f"❌ Error al leer token desde Supabase para {app_id}: {str(e)}", 500
