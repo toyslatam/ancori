@@ -68,21 +68,16 @@ def callback(app_id):
         access_token = auth_client.access_token
         refresh_token = auth_client.refresh_token
 
-        data = {
+        supabase.table("tokens").upsert({
+            "app_id": app_id,
             "access_token": access_token,
             "refresh_token": refresh_token,
             "realm_id": realm_id
-        }
+        }).execute()
 
-      supabase.table("tokens").upsert({
-    "app_id": app_id,
-    "access_token": access_token,
-    "refresh_token": refresh_token,
-    "realm_id": realm_id
-}).execute()
+        print(f"✅ Tokens guardados en Supabase para {app_id}")
+        return f'✅ Tokens guardados en Supabase para {app_id}', 200
 
-print(f"✅ Tokens guardados en Supabase para {app_id}")
-return f'✅ Tokens guardados en Supabase para {app_id}', 200
     except Exception as e:
         print(f"❌ Error en {app_id}:", str(e))
         return '❌ Error al obtener token', 500
