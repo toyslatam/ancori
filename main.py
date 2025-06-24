@@ -129,16 +129,19 @@ def refresh_tokens():
         time.sleep(55 * 60)
         for app_id, cfg in APPS.items():
             try:
-                tokens_json = os.environ.get(f"TOKENS_{app_id.upper()}")
-                if not tokens_json:
-                    print(f"⛔ No TOKENS_{app_id.upper()} en variables de entorno")
+                # Leer desde Supabase
+                response = supabase.table("tokens").select("*").eq("app_id", app_id).execute()
+                data = response.data
+                if not data:
+                    print(f"⛔ No hay tokens guardados en Supabase para {app_id}")
                     continue
-                tokens = json.loads(tokens_json)
+
+                tokens = data[0]
                 refresh_token = tokens.get("refresh_token")
                 realm_id = tokens.get("realm_id")
 
                 if not refresh_token:
-                    print(f"⛔ No refresh_token en {app_id}")
+                    print(f"⛔ No refresh_token disponible para {app_id}")
                     continue
 
                 redirect_uri = f'{RENDER_DOMAIN}/{app_id}/callback'
@@ -148,20 +151,23 @@ def refresh_tokens():
                     redirect_uri=redirect_uri,
                     environment=ENVIRONMENT
                 )
+
                 auth_client.refresh(refresh_token)
 
+                # Guardar nuevos tokens en Supabase
                 new_tokens = {
+                    "app_id": app_id,
                     "access_token": auth_client.access_token,
                     "refresh_token": auth_client.refresh_token,
                     "realm_id": realm_id
                 }
 
-                print(f"🔄 Nuevos tokens para TOKENS_{app_id.upper()}:\n{json.dumps(new_tokens, indent=2)}")
-                print(f"✅ Tokens renovados para {app_id}")
+                supabase.table("tokens").upsert(new_tokens).execute()
+
+                print(f"🔄 Tokens actualizados correctamente en Supabase para {app_id}")
 
             except Exception as e:
-                print(f"❌ Error renovando tokens para {app_id}:", str(e))
-
+                print(f"❌ Error al renovar tokens para {app_id}:", str(e))
 def run_flask():
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
 
