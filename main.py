@@ -67,11 +67,8 @@ def callback(app_id):
             "realm_id": realm_id
         }
 
-       print(f"🔐 Copia y guarda esta variable en Render → Environment → TOKENS_{app_id.upper()}:\n{json.dumps(data, indent=2)}")
-return f'✅ Tokens generados para {app_id}. Ver consola para copiar variable.', 200
-
-        print(f"✅ Tokens guardados para {app_id}")
-        return f'✅ Tokens obtenidos correctamente para {app_id}', 200
+        print(f"🔐 Copia y guarda esta variable en Render → Environment → TOKENS_{app_id.upper()}:\n{json.dumps(data, indent=2)}")
+        return f'✅ Tokens generados para {app_id}. Ver consola para copiar variable.', 200
 
     except Exception as e:
         print(f"❌ Error en {app_id}:", str(e))
@@ -124,10 +121,10 @@ def refresh_tokens():
         for app_id, cfg in APPS.items():
             try:
                 tokens_json = os.environ.get(f"TOKENS_{app_id.upper()}")
-if not tokens_json:
-    print(f"⛔ No TOKENS_{app_id.upper()} en variables de entorno")
-    continue
-tokens = json.loads(tokens_json)
+                if not tokens_json:
+                    print(f"⛔ No TOKENS_{app_id.upper()} en variables de entorno")
+                    continue
+                tokens = json.loads(tokens_json)
                 refresh_token = tokens.get("refresh_token")
                 realm_id = tokens.get("realm_id")
 
@@ -149,8 +146,8 @@ tokens = json.loads(tokens_json)
                     "refresh_token": auth_client.refresh_token,
                     "realm_id": realm_id
                 }
-print(f"🔄 Nuevos tokens para TOKENS_{app_id.upper()}:\n{json.dumps(new_tokens, indent=2)}")
 
+                print(f"🔄 Nuevos tokens para TOKENS_{app_id.upper()}:\n{json.dumps(new_tokens, indent=2)}")
                 print(f"✅ Tokens renovados para {app_id}")
 
             except Exception as e:
