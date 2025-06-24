@@ -67,8 +67,8 @@ def callback(app_id):
             "realm_id": realm_id
         }
 
-        with open(f"tokens_{app_id}.json", "w") as f:
-            json.dump(data, f, indent=2)
+       print(f"🔐 Copia y guarda esta variable en Render → Environment → TOKENS_{app_id.upper()}:\n{json.dumps(data, indent=2)}")
+return f'✅ Tokens generados para {app_id}. Ver consola para copiar variable.', 200
 
         print(f"✅ Tokens guardados para {app_id}")
         return f'✅ Tokens obtenidos correctamente para {app_id}', 200
@@ -110,9 +110,11 @@ def webhook(app_id):
 @app.route('/<app_id>/get-token')
 def get_token(app_id):
     try:
-        with open(f"tokens_{app_id}.json", "r") as f:
-            tokens = json.load(f)
-            return tokens.get("access_token", ""), 200
+        tokens_json = os.environ.get(f"TOKENS_{app_id.upper()}")
+        if not tokens_json:
+            return f"❌ No se encontró variable TOKENS_{app_id.upper()}", 404
+        tokens = json.loads(tokens_json)
+        return tokens.get("access_token", ""), 200
     except Exception as e:
         return f"❌ Error al leer token de {app_id}: {str(e)}", 500
 
@@ -121,10 +123,14 @@ def refresh_tokens():
         time.sleep(55 * 60)
         for app_id, cfg in APPS.items():
             try:
-                with open(f"tokens_{app_id}.json", "r") as f:
-                    tokens = json.load(f)
+                tokens_json = os.environ.get(f"TOKENS_{app_id.upper()}")
+if not tokens_json:
+    print(f"⛔ No TOKENS_{app_id.upper()} en variables de entorno")
+    continue
+tokens = json.loads(tokens_json)
                 refresh_token = tokens.get("refresh_token")
                 realm_id = tokens.get("realm_id")
+
                 if not refresh_token:
                     print(f"⛔ No refresh_token en {app_id}")
                     continue
@@ -143,9 +149,7 @@ def refresh_tokens():
                     "refresh_token": auth_client.refresh_token,
                     "realm_id": realm_id
                 }
-
-                with open(f"tokens_{app_id}.json", "w") as f:
-                    json.dump(new_tokens, f, indent=2)
+print(f"🔄 Nuevos tokens para TOKENS_{app_id.upper()}:\n{json.dumps(new_tokens, indent=2)}")
 
                 print(f"✅ Tokens renovados para {app_id}")
 
