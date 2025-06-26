@@ -104,18 +104,16 @@ def webhook(app_id):
     payload = request.json
     print(f"✅ Webhook recibido para {app_id}: {payload}")
 
- try:
-    response = requests.post(cfg["POWER_AUTOMATE_URL"], json=payload)
-    print(f"📤 Enviado a Power Automate {app_id}: {response.status_code}")
-    print(f"📦 Respuesta de Power Automate: {response.text}")
-    if response.status_code >= 400:
-        print(f"⚠️ Power Automate respondió con error para {app_id}")
-except Exception as e:
-    print(f"❌ Error al hacer POST a Power Automate para {app_id}:", str(e))
+    try:
+        response = requests.post(cfg["POWER_AUTOMATE_URL"], json=payload)
+        print(f"📤 Enviado a Power Automate {app_id}: {response.status_code}")
+        print(f"📦 Respuesta de Power Automate: {response.text}")
+        if response.status_code >= 400:
+            print(f"⚠️ Power Automate respondió con error para {app_id}")
+    except Exception as e:
+        print(f"❌ Error al hacer POST a Power Automate para {app_id}:", str(e))
 
-# ✅ Esto debe estar FUERA del `except`, así siempre se responde correctamente al webhook
-return 'OK', 200
-
+    return 'OK', 200
 @app.route('/<app_id>/get-token')
 def get_token(app_id):
     try:
