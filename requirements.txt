@@ -1,5 +1,5 @@
 flask
-intuit-oauth
+intuitlib
 requests
 gunicorn
 python-dotenv
