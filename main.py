@@ -104,11 +104,14 @@ def webhook(app_id):
     payload = request.json
     print(f"✅ Webhook recibido para {app_id}: {payload}")
 
-    try:
-        response = requests.post(cfg["POWER_AUTOMATE_URL"], json=payload)
-        print(f"📤 Enviado a Power Automate {app_id}: {response.status_code}")
-    except Exception as e:
-        print("❌ Error al reenviar:", str(e))
+  try:
+    response = requests.post(cfg["POWER_AUTOMATE_URL"], json=payload)
+    print(f"📤 Enviado a Power Automate {app_id}: {response.status_code}")
+    print(f"📦 Respuesta de Power Automate: {response.text}")
+    if response.status_code >= 400:
+        print(f"⚠️ Power Automate respondió con error para {app_id}")
+except Exception as e:
+    print(f"❌ Error al hacer POST a Power Automate para {app_id}:", str(e))
 
     return 'OK', 200
 
