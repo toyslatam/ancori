@@ -10,17 +10,14 @@ from intuitlib.client import AuthClient
 from intuitlib.enums import Scopes
 import requests
 
-
 from supabase import create_client
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_API_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# 🌐 Servidor Flask
 app = Flask(__name__)
 
-# ⚙️ Configuración para múltiples apps
 APPS = {
     "app_a": {
         "CLIENT_ID": 'ABpiC27UvCiXPjumk5T54cZWy4rxjkvc1rgxGpDx6uyfzndQeY',
@@ -39,9 +36,11 @@ APPS = {
 ENVIRONMENT = 'production'
 RENDER_DOMAIN = 'https://quickbooks-webhook.onrender.com'
 
+
 @app.route('/')
 def index():
     return '✅ Servidor Flask activo en Render', 200
+
 
 @app.route('/<app_id>/callback')
 def callback(app_id):
@@ -82,6 +81,7 @@ def callback(app_id):
         print(f"❌ Error en {app_id}:", str(e))
         return '❌ Error al obtener token', 500
 
+
 @app.route('/<app_id>/webhook', methods=['POST'])
 def webhook(app_id):
     if app_id not in APPS:
@@ -114,6 +114,8 @@ def webhook(app_id):
         print(f"❌ Error al hacer POST a Power Automate para {app_id}:", str(e))
 
     return 'OK', 200
+
+
 @app.route('/<app_id>/get-token')
 def get_token(app_id):
     try:
@@ -121,57 +123,62 @@ def get_token(app_id):
         data = response.data
         if not data:
             return f"❌ No hay tokens en Supabase para {app_id}", 404
-        tokens = data[0]  # Tomamos la primera fila (solo debería haber una)
+        tokens = data[0]
         return tokens.get("access_token", ""), 200
     except Exception as e:
         return f"❌ Error al leer token desde Supabase para {app_id}: {str(e)}", 500
 
-def refresh_tokens():
-    while True:
-        time.sleep(55 * 60)
-        for app_id, cfg in APPS.items():
-            try:
-                # Leer desde Supabase
-                response = supabase.table("tokens").select("*").eq("app_id", app_id).execute()
-                data = response.data
-                if not data:
-                    print(f"⛔ No hay tokens guardados en Supabase para {app_id}")
-                    continue
 
-                tokens = data[0]
-                refresh_token = tokens.get("refresh_token")
-                realm_id = tokens.get("realm_id")
+def refresh_tokens_once():
+    print("🚀 Ejecutando renovación manual de tokens")
+    for app_id, cfg in APPS.items():
+        try:
+            response = supabase.table("tokens").select("*").eq("app_id", app_id).execute()
+            data = response.data
+            if not data:
+                print(f"⛔ No hay tokens guardados en Supabase para {app_id}")
+                continue
 
-                if not refresh_token:
-                    print(f"⛔ No refresh_token disponible para {app_id}")
-                    continue
+            tokens = data[0]
+            refresh_token = tokens.get("refresh_token")
+            realm_id = tokens.get("realm_id")
 
-                redirect_uri = f'{RENDER_DOMAIN}/{app_id}/callback'
-                auth_client = AuthClient(
-                    client_id=cfg["CLIENT_ID"],
-                    client_secret=cfg["CLIENT_SECRET"],
-                    redirect_uri=redirect_uri,
-                    environment=ENVIRONMENT
-                )
+            if not refresh_token:
+                print(f"⛔ No refresh_token disponible para {app_id}")
+                continue
 
-                auth_client.refresh(refresh_token)
+            redirect_uri = f'{RENDER_DOMAIN}/{app_id}/callback'
+            auth_client = AuthClient(
+                client_id=cfg["CLIENT_ID"],
+                client_secret=cfg["CLIENT_SECRET"],
+                redirect_uri=redirect_uri,
+                environment=ENVIRONMENT
+            )
 
-                # Guardar nuevos tokens en Supabase
-                new_tokens = {
-                    "app_id": app_id,
-                    "access_token": auth_client.access_token,
-                    "refresh_token": auth_client.refresh_token,
-                    "realm_id": realm_id
-                }
+            auth_client.refresh(refresh_token)
 
-                supabase.table("tokens").upsert(new_tokens).execute()
+            new_tokens = {
+                "app_id": app_id,
+                "access_token": auth_client.access_token,
+                "refresh_token": auth_client.refresh_token,
+                "realm_id": realm_id
+            }
 
-                print(f"🔄 Tokens actualizados correctamente en Supabase para {app_id}")
+            supabase.table("tokens").upsert(new_tokens).execute()
+            print(f"✅ Tokens actualizados en Supabase para {app_id}")
 
-            except Exception as e:
-                print(f"❌ Error al renovar tokens para {app_id}:", str(e))
-def run_flask():
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+        except Exception as e:
+            print(f"❌ Error renovando tokens para {app_id}:", str(e))
+
+
+@app.route('/refresh-tokens', methods=['GET'])
+def refresh_tokens_endpoint():
+    try:
+        threading.Thread(target=refresh_tokens_once).start()
+        return '🔄 Proceso de renovación iniciado', 200
+    except Exception as e:
+        return f'❌ Error al iniciar renovación: {str(e)}', 500
+
 
 @app.route('/auth-urls')
 def auth_urls():
@@ -188,14 +195,17 @@ def auth_urls():
         html += f"<p><strong>{app_id}:</strong> <a href='{auth_url}' target='_blank'>{auth_url}</a></p>"
     return html
 
+
+def run_flask():
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
+
 if __name__ == '__main__':
     print("🚀 Iniciando servidor Flask en Render...")
 
     threading.Thread(target=run_flask, daemon=True).start()
-    threading.Thread(target=refresh_tokens, daemon=True).start()
 
     time.sleep(3)
-
     for app_id, cfg in APPS.items():
         redirect_uri = f'{RENDER_DOMAIN}/{app_id}/callback'
         auth_client = AuthClient(
