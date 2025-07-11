@@ -2,14 +2,12 @@ import time
 import hmac
 import base64
 import hashlib
-import threading
 import json
 import os
 from flask import Flask, request, abort
 from intuitlib.client import AuthClient
 from intuitlib.enums import Scopes
 import requests
-
 from supabase import create_client
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -174,10 +172,10 @@ def refresh_tokens_once():
 @app.route('/refresh-tokens', methods=['GET'])
 def refresh_tokens_endpoint():
     try:
-        threading.Thread(target=refresh_tokens_once).start()
-        return '🔄 Proceso de renovación iniciado', 200
+        refresh_tokens_once()
+        return '🔄 Proceso de renovación ejecutado', 200
     except Exception as e:
-        return f'❌ Error al iniciar renovación: {str(e)}', 500
+        return f'❌ Error al renovar tokens: {str(e)}', 500
 
 
 @app.route('/auth-urls')
@@ -196,27 +194,6 @@ def auth_urls():
     return html
 
 
-def run_flask():
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
-
-
 if __name__ == '__main__':
     print("🚀 Iniciando servidor Flask en Render...")
-
-    threading.Thread(target=run_flask, daemon=True).start()
-
-    time.sleep(3)
-    for app_id, cfg in APPS.items():
-        redirect_uri = f'{RENDER_DOMAIN}/{app_id}/callback'
-        auth_client = AuthClient(
-            client_id=cfg["CLIENT_ID"],
-            client_secret=cfg["CLIENT_SECRET"],
-            redirect_uri=redirect_uri,
-            environment=ENVIRONMENT
-        )
-        auth_url = auth_client.get_authorization_url([Scopes.ACCOUNTING])
-        print(f"\n🔗 [{app_id}] Autoriza la app aquí:\n{auth_url}")
-
-    print("\n📡 Esperando autorización... (Ctrl+C para detener)")
-    while True:
-        time.sleep(1)
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
