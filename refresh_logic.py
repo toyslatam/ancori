@@ -1,30 +1,64 @@
 # refresh_logic.py
 
 import os
-import requests
+from intuitlib.client import AuthClient
+from supabase import create_client
+
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_API_KEY"]
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+APPS = {
+    "app_a": {
+        "CLIENT_ID": os.environ["APP_A_CLIENT_ID"],
+        "CLIENT_SECRET": os.environ["APP_A_CLIENT_SECRET"],
+    },
+    "app_b": {
+        "CLIENT_ID": os.environ["APP_B_CLIENT_ID"],
+        "CLIENT_SECRET": os.environ["APP_B_CLIENT_SECRET"],
+    }
+}
+
+RENDER_DOMAIN = os.environ.get("RENDER_DOMAIN", "https://quickbooks-webhook.onrender.com")
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
 
 def refresh_tokens_once():
-    client_id = os.getenv("CLIENT_ID")
-    client_secret = os.getenv("CLIENT_SECRET")
-    refresh_token = os.getenv("REFRESH_TOKEN")
+    print("🚀 Ejecutando renovación manual de tokens")
+    for app_id, cfg in APPS.items():
+        try:
+            response = supabase.table("tokens").select("*").eq("app_id", app_id).execute()
+            data = response.data
+            if not data:
+                print(f"⛔ No hay tokens guardados en Supabase para {app_id}")
+                continue
 
-    url = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
-    auth = (client_id, client_secret)
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
-    }
-    data = {
-        "grant_type": "refresh_token",
-        "refresh_token": refresh_token
-    }
+            tokens = data[0]
+            refresh_token = tokens.get("refresh_token")
+            realm_id = tokens.get("realm_id")
 
-    response = requests.post(url, auth=auth, data=data)
+            if not refresh_token:
+                print(f"⛔ No refresh_token disponible para {app_id}")
+                continue
 
-    if response.status_code == 200:
-        tokens = response.json()
-        print("✅ Access token actualizado:", tokens["access_token"])
-        print("🔁 Nuevo refresh token:", tokens["refresh_token"])
-        # Aquí podrías guardar los tokens donde necesites
-    else:
-        print("❌ Error al refrescar token:", response.status_code, response.text)
+            redirect_uri = f'{RENDER_DOMAIN}/{app_id}/callback'
+            auth_client = AuthClient(
+                client_id=cfg["CLIENT_ID"],
+                client_secret=cfg["CLIENT_SECRET"],
+                redirect_uri=redirect_uri,
+                environment=ENVIRONMENT
+            )
+
+            auth_client.refresh(refresh_token)
+
+            new_tokens = {
+                "app_id": app_id,
+                "access_token": auth_client.access_token,
+                "refresh_token": auth_client.refresh_token,
+                "realm_id": realm_id
+            }
+
+            supabase.table("tokens").upsert(new_tokens).execute()
+            print(f"✅ Tokens actualizados en Supabase para {app_id}")
+
+        except Exception as e:
+            print(f"❌ Error renovando tokens para {app_id}:", str(e))
