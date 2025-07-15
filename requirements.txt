@@ -1,6 +1,6 @@
 flask
 intuit-oauth
-requests
+
 gunicorn
 python-dotenv
 supabase
