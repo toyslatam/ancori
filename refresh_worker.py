@@ -1,9 +1,7 @@
 # refresh_worker.py
 
-import time
-import os
-from main import refresh_tokens_once  # ← usa esta, no refresh_tokens
+from refresh_logic import refresh_tokens_once
 
 if __name__ == "__main__":
     print("🔄 Worker de tokens iniciado...")
-    refresh_tokens_once()  # Esta ejecuta una sola vez el refrescos
+    refresh_tokens_once()
