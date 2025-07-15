@@ -1,7 +1,7 @@
 # refresh_logic.py
 
 import os
-import requests
+import requests==2.31.0
 
 def refresh_tokens_once():
     client_id = os.getenv("CLIENT_ID")
